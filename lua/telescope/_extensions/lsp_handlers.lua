@@ -116,8 +116,8 @@ return telescope.register_extension({
 		vim.lsp.handlers['textDocument/definition'] = location_handler('LSP Definitions', opts)
 		vim.lsp.handlers['textDocument/implementation'] = location_handler('LSP Implementations', opts)
 		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts)
-		vim.lsp.handlers['textDocument/documentSymbol'] =  symbol_handler('LSP Document Symbols', opts)
-		vim.lsp.handlers['workspace/symbol'] =  symbol_handler('LSP Workspace Symbols', opts)
+		vim.lsp.handlers['textDocument/documentSymbol'] = symbol_handler('LSP Document Symbols', opts)
+		vim.lsp.handlers['workspace/symbol'] = symbol_handler('LSP Workspace Symbols', opts)
 		vim.lsp.handlers['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts)
 		vim.lsp.handlers['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts)
 	end,
