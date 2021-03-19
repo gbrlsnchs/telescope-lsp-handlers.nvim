@@ -76,6 +76,11 @@ local function symbol_handler(prompt_name, opts)
 	opts = opts or {}
 
 	return function(_, _, result)
+		if not result or vim.tbl_isempty(result) then
+			print('No symbol found')
+			return
+		end
+
 		local items = lsp_util.symbols_to_items(result)
 		find(prompt_name, items, opts)
 	end
