@@ -37,7 +37,7 @@ local function attach_location_mappings(prompt_bufnr, map)
 		actions.close(prompt_bufnr)
 
 		local pos = {
-			line = selection.lnum,
+			line = selection.lnum - 1,
 			character = selection.col,
 		}
 
@@ -155,7 +155,7 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 				table.insert(items, {
 					filename = vim.uri_to_fname(ch_item.uri),
 					text = ch_item.name,
-					lnum = range.start.line,
+					lnum = range.start.line + 1,
 					col = range.start.character + 1,
 				})
 			end
