@@ -84,9 +84,13 @@ local function attach_code_action_mappings(prompt_bufnr, map)
 	return true
 end
 
-local function find(prompt_title, items, opts)
+local function find(prompt_title, items, opts, hide_preview)
 	local entry_maker = opts.entry_maker or make_entry.gen_from_quickfix(opts)
 	local attach_mappings = opts.attach_mappings or attach_location_mappings
+	local previewer = nil
+	if not hide_preview then
+		previewer = conf.qflist_previewer(opts)
+	end
 
 	pickers.new({
 		prompt_title = prompt_title,
@@ -94,7 +98,7 @@ local function find(prompt_title, items, opts)
 			results = items,
 			entry_maker = entry_maker,
 		}),
-		previewer = conf.qflist_previewer(opts),
+		previewer = previewer,
 		sorter = conf.generic_sorter(opts),
 		attach_mappings = attach_mappings,
 	}):find()
@@ -173,12 +177,6 @@ local function code_action_handler(prompt_title, opts)
 			return
 		end
 
-		_, result = next(actions)
-		if not result then
-			print('No code action available')
-			return
-		end
-
 		for idx, value in ipairs(result) do
 			value.idx = idx
 		end
@@ -188,12 +186,12 @@ local function code_action_handler(prompt_title, opts)
 				valid = line ~= nil,
 				value = line,
 				ordinal = line.idx .. line.title,
-				display = string.format('%d: %s', line.idx, line.title),
+				display = string.format('#%d: %s', line.idx, line.title),
 			}
 		end
 		opts.attach_mappings = attach_code_action_mappings
 
-		find(prompt_title, result, opts)
+		find(prompt_title, result, opts, true)
 	end
 end
 
