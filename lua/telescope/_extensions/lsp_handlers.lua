@@ -33,8 +33,10 @@ end
 local function attach_location_mappings(prompt_bufnr, map)
 	local function jump()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
-
 		actions.close(prompt_bufnr)
+		if not selection then
+			return
+		end
 
 		local pos = {
 			line = selection.lnum - 1,
@@ -67,6 +69,9 @@ local function attach_code_action_mappings(prompt_bufnr, map)
 	local function apply_edit()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
 		actions.close(prompt_bufnr)
+		if not selection then
+			return
+		end
 
 		local action = selection.value
 		if action.edit then
