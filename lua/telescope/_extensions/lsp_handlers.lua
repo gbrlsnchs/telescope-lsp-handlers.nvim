@@ -156,7 +156,7 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 					filename = vim.uri_to_fname(ch_item.uri),
 					text = ch_item.name,
 					lnum = range.start.line,
-					col = range.start.character,
+					col = range.start.character + 1,
 				})
 			end
 		end
