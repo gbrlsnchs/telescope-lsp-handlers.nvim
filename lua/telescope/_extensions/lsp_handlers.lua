@@ -8,7 +8,45 @@ local conf = require('telescope.config').values
 
 local lsp_util = vim.lsp.util
 local jump_to_location = lsp_util.jump_to_location
-local locations_to_items = lsp_util.locations_to_items
+
+local function attach_mappings(prompt_bufnr, map)
+	local function jump()
+		local selection = action_state.get_selected_entry(prompt_bufnr)
+
+		actions.close(prompt_bufnr)
+
+		local pos = {
+			line = selection.lnum,
+			character = selection.col,
+		}
+
+		jump_to_location({
+			uri = vim.uri_from_fname(selection.filename),
+			range = {
+				start = pos,
+				['end'] = pos,
+			}
+		})
+	end
+	map('i', '<CR>', jump)
+	map('n', '<CR>', jump)
+
+	-- Additional mappings don't push the item to the tagstack.
+	return true
+end
+
+local function find(prompt_title, items, opts)
+	pickers.new({
+		prompt_title = prompt_title,
+		finder = finders.new_table({
+			results = items,
+			entry_maker = make_entry.gen_from_quickfix(opts),
+		}),
+		previewer = conf.qflist_previewer(opts),
+		sorter = conf.generic_sorter(opts),
+		attach_mappings = attach_mappings,
+	}):find()
+end
 
 local function location_handler(prompt_title, opts)
 	opts = opts or {}
@@ -29,41 +67,17 @@ local function location_handler(prompt_title, opts)
 			return
 		end
 
-		pickers.new({
-			prompt_title = prompt_title,
-			finder = finders.new_table({
-				results = locations_to_items(result),
-				entry_maker = make_entry.gen_from_quickfix(opts),
-			}),
-			previewer = conf.qflist_previewer(opts),
-			sorter = conf.generic_sorter(opts),
-			attach_mappings = function(prompt_bufnr, map)
-				local function jump()
-					local selection = action_state.get_selected_entry(prompt_bufnr)
+		local items = lsp_util.locations_to_items(result)
+		find(prompt_title, items, opts)
+	end
+end
 
-					actions.close(prompt_bufnr)
+local function symbol_handler(prompt_name, opts)
+	opts = opts or {}
 
-					local pos = {
-						line = selection.lnum,
-						character = selection.col,
-					}
-
-					jump_to_location({
-						uri = vim.uri_from_fname(selection.filename),
-						range = {
-							start = pos,
-							['end'] = pos,
-						}
-					})
-				end
-
-				map('i', '<CR>', jump)
-				map('n', '<CR>', jump)
-
-				-- Additional mappings don't push the item to the tagstack.
-				return true
-			end,
-		}):find()
+	return function(_, _, result)
+		local items = lsp_util.symbols_to_items(result)
+		find(prompt_name, items, opts)
 	end
 end
 
@@ -73,6 +87,8 @@ return telescope.register_extension({
 		vim.lsp.handlers['textDocument/definition'] = location_handler('LSP Definitions', opts)
 		vim.lsp.handlers['textDocument/implementation'] = location_handler('LSP Implementations', opts)
 		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts)
+		vim.lsp.handlers['textDocument/documentSymbol'] =  symbol_handler('LSP Document Symbols', opts)
+		vim.lsp.handlers['workspace/symbol'] =  symbol_handler('LSP Workspace Symbols', opts)
 	end,
 	exports = {},
 })
