@@ -86,6 +86,30 @@ local function symbol_handler(prompt_name, opts)
 	end
 end
 
+local function call_hierarchy_handler(prompt_name, direction, opts)
+	return function(_, _, result)
+		if not result or vim.tbl_isempty(result) then
+			print('No call found')
+			return
+		end
+
+		local items = {}
+		for _, ch_call in pairs(result) do
+			local ch_item = ch_call[direction]
+
+			for _, range in pairs(ch_call.fromRanges) do
+				table.insert(items, {
+					filename = vim.uri_to_fname(ch_item.uri),
+					text = ch_item.name,
+					lnum = range.start.line + 1,
+					col = range.start.character + 1,
+				})
+			end
+		end
+		find(prompt_name, items, opts)
+	end
+end
+
 return telescope.register_extension({
 	setup = function(opts)
 		vim.lsp.handlers['textDocument/declaration'] = location_handler('LSP Declarations', opts)
@@ -94,6 +118,8 @@ return telescope.register_extension({
 		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts)
 		vim.lsp.handlers['textDocument/documentSymbol'] =  symbol_handler('LSP Document Symbols', opts)
 		vim.lsp.handlers['workspace/symbol'] =  symbol_handler('LSP Workspace Symbols', opts)
+		vim.lsp.handlers['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts)
+		vim.lsp.handlers['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts)
 	end,
 	exports = {},
 })
