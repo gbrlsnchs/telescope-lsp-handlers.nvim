@@ -9,7 +9,27 @@ local conf = require('telescope.config').values
 local lsp_util = vim.lsp.util
 local jump_to_location = lsp_util.jump_to_location
 
-local function attach_mappings(prompt_bufnr, map)
+local mapping_actions = {
+	['<C-x>'] = 'split',
+	['<C-v>'] = 'vsplit',
+	['<C-t>'] = 'tabnew',
+}
+
+local function map_jump_to_location(map, mode, key, fn)
+	local action = mapping_actions[key]
+
+	if not action then
+		map(mode, key, fn)
+		return
+	end
+
+	map(mode, key, function()
+		vim.cmd(action)
+		fn()
+	end)
+end
+
+local function attach_location_mappings(prompt_bufnr, map)
 	local function jump()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
 
@@ -28,8 +48,15 @@ local function attach_mappings(prompt_bufnr, map)
 			}
 		})
 	end
-	map('i', '<CR>', jump)
-	map('n', '<CR>', jump)
+
+	local modes = {'i', 'n'}
+	local keys = {'<CR>', '<C-x>', '<C-v>', '<C-t>'}
+
+	for _, mode in pairs(modes) do
+		for _, key in pairs(keys) do
+			map_jump_to_location(map, mode, key, jump)
+		end
+	end
 
 	-- Additional mappings don't push the item to the tagstack.
 	return true
@@ -44,7 +71,7 @@ local function find(prompt_title, items, opts)
 		}),
 		previewer = conf.qflist_previewer(opts),
 		sorter = conf.generic_sorter(opts),
-		attach_mappings = attach_mappings,
+		attach_mappings = attach_location_mappings,
 	}):find()
 end
 
