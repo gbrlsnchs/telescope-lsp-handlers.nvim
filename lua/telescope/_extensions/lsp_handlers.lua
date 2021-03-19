@@ -155,8 +155,8 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 				table.insert(items, {
 					filename = vim.uri_to_fname(ch_item.uri),
 					text = ch_item.name,
-					lnum = range.start.line + 1,
-					col = range.start.character + 1,
+					lnum = range.start.line,
+					col = range.start.character,
 				})
 			end
 		end
