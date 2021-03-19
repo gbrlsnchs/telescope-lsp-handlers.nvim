@@ -114,6 +114,8 @@ local function symbol_handler(prompt_name, opts)
 end
 
 local function call_hierarchy_handler(prompt_name, direction, opts)
+	opts = opts or {}
+
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
 			print('No call found')
