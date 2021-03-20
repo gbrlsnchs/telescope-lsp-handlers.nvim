@@ -11,31 +11,22 @@ local lsp_buf = vim.lsp.buf
 local jump_to_location = lsp_util.jump_to_location
 
 local mapping_actions = {
-	['<C-x>'] = 'split',
-	['<C-v>'] = 'vsplit',
-	['<C-t>'] = 'tabnew',
+	['<C-x>'] = actions.file_split,
+	['<C-v>'] = actions.file_vsplit,
+	['<C-t>'] = actions.file_tab,
 }
 
-local function map_jump_to_location(map, mode, key, fn)
-	local action = mapping_actions[key]
-
-	if not action then
-		map(mode, key, fn)
-		return
-	end
-
-	map(mode, key, function()
-		vim.cmd(action)
-		fn()
-	end)
-end
-
-local function attach_location_mappings(prompt_bufnr, map)
-	local function jump()
+local function jump_fn(prompt_bufnr, action)
+	return function()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
-		actions.close(prompt_bufnr)
 		if not selection then
 			return
+		end
+
+		if action then
+			action(prompt_bufnr)
+		else
+			actions.close(prompt_bufnr)
 		end
 
 		local pos = {
@@ -51,13 +42,17 @@ local function attach_location_mappings(prompt_bufnr, map)
 			}
 		})
 	end
+end
 
+
+local function attach_location_mappings(prompt_bufnr, map)
 	local modes = {'i', 'n'}
 	local keys = {'<CR>', '<C-x>', '<C-v>', '<C-t>'}
 
 	for _, mode in pairs(modes) do
 		for _, key in pairs(keys) do
-			map_jump_to_location(map, mode, key, jump)
+			local action = mapping_actions[key]
+			map(mode, key, jump_fn(prompt_bufnr, action))
 		end
 	end
 
@@ -65,8 +60,8 @@ local function attach_location_mappings(prompt_bufnr, map)
 	return true
 end
 
-local function attach_code_action_mappings(prompt_bufnr, map)
-	local function apply_edit()
+local function apply_edit_fn(prompt_bufnr)
+	return function()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
 		actions.close(prompt_bufnr)
 		if not selection then
@@ -82,18 +77,22 @@ local function attach_code_action_mappings(prompt_bufnr, map)
 			lsp_buf.execute_command(action)
 		end
 	end
+end
 
-	map('i', '<CR>', apply_edit)
-	map('n', '<CR>', apply_edit)
+local function attach_code_action_mappings(prompt_bufnr, map)
+	map('i', '<CR>', apply_edit_fn(prompt_bufnr))
+	map('n', '<CR>', apply_edit_fn(prompt_bufnr))
 
 	return true
 end
 
-local function find(prompt_title, items, opts, hide_preview)
-	local entry_maker = opts.entry_maker or make_entry.gen_from_quickfix(opts)
-	local attach_mappings = opts.attach_mappings or attach_location_mappings
+local function find(prompt_title, items, find_opts)
+	local opts = find_opts.opts or {}
+
+	local entry_maker = find_opts.entry_maker or make_entry.gen_from_quickfix(opts)
+	local attach_mappings = find_opts.attach_mappings or attach_location_mappings
 	local previewer = nil
-	if not hide_preview then
+	if not find_opts.hide_preview then
 		previewer = conf.qflist_previewer(opts)
 	end
 
@@ -110,8 +109,6 @@ local function find(prompt_title, items, opts, hide_preview)
 end
 
 local function location_handler(prompt_title, opts)
-	opts = opts or {}
-
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
 			print('No reference found')
@@ -129,7 +126,7 @@ local function location_handler(prompt_title, opts)
 		end
 
 		local items = lsp_util.locations_to_items(result)
-		find(prompt_title, items, opts)
+		find(prompt_title, items, { opts = opts })
 	end
 end
 
@@ -143,13 +140,11 @@ local function symbol_handler(prompt_name, opts)
 		end
 
 		local items = lsp_util.symbols_to_items(result)
-		find(prompt_name, items, opts)
+		find(prompt_name, items, { opts = opts })
 	end
 end
 
 local function call_hierarchy_handler(prompt_name, direction, opts)
-	opts = opts or {}
-
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
 			print('No call found')
@@ -169,13 +164,11 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 				})
 			end
 		end
-		find(prompt_name, items, opts)
+		find(prompt_name, items, { opts = opts })
 	end
 end
 
 local function code_action_handler(prompt_title, opts)
-	opts = opts or {}
-
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
 			print('No code action available')
@@ -186,17 +179,20 @@ local function code_action_handler(prompt_title, opts)
 			value.idx = idx
 		end
 
-		opts.entry_maker = function(line)
-			return {
-				valid = line ~= nil,
-				value = line,
-				ordinal = line.idx .. line.title,
-				display = string.format('#%d: %s', line.idx, line.title),
-			}
-		end
-		opts.attach_mappings = attach_code_action_mappings
-
-		find(prompt_title, result, opts, true)
+		local find_opts = {
+			opts = opts,
+			entry_maker = function(line)
+				return {
+					valid = line ~= nil,
+					value = line,
+					ordinal = line.idx .. line.title,
+					display = string.format('#%d: %s', line.idx, line.title),
+				}
+			end,
+			attach_mappings = attach_code_action_mappings,
+			hide_preview = true,
+		}
+		find(prompt_title, result, find_opts)
 	end
 end
 
