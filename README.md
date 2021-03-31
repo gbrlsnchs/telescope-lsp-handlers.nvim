@@ -5,6 +5,7 @@ An extension for Telescope that registers handlers for
 - `textDocument/definition`
 - `textDocument/implementation`
 - `textDocument/typeDefinition`
+- `textDocument/references`
 - `textDocument/documentSymbol`
 - `workspace/symbol`
 - `callHierarchy/incomingCalls`
