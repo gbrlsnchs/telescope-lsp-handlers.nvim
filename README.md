@@ -26,4 +26,46 @@ Install this plugin with your favorite package manager and then load it with Tel
 telescope.load_extension('lsp_handlers')
 ```
 
+### Customization
+It is possible to customize handlers in Telescope's setup phase. The following configuration is the
+default one:
+```lua
+telescope.setup({
+	extensions = {
+		lsp_handlers = {
+			location = {
+				telescope = {},
+				no_result_message = 'No reference found',
+			},
+			symbol = {
+				telescope = {},
+				no_result_message = 'No symbol found',
+			},
+			call_hierarchy = {
+				telescope = {},
+				no_result_message = 'No call found',
+			},
+			code_action = {
+				telescope = {},
+				no_result_message = 'No code action available',
+				prefix = '',
+			},
+		},
+	}
+})
+```
+
+I personally like to have the following settings, which gives me a cute dropdown for code actions:
+```lua
+telescope.setup({
+	extensions = {
+		lsp_handlers = {
+			code_action = {
+				telescope = require('telescope.themes').get_dropdown({}),
+			},
+		},
+	},
+}
+```
+
 Then proceed to use the built-in API for supported requests.

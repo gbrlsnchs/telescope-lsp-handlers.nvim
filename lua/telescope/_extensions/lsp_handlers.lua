@@ -96,7 +96,7 @@ local function find(prompt_title, items, find_opts)
 		previewer = conf.qflist_previewer(opts)
 	end
 
-	pickers.new({
+	pickers.new(opts, {
 		prompt_title = prompt_title,
 		finder = finders.new_table({
 			results = items,
@@ -111,7 +111,7 @@ end
 local function location_handler(prompt_title, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print('No reference found')
+			print(opts.no_result_message)
 			return
 		end
 
@@ -126,7 +126,7 @@ local function location_handler(prompt_title, opts)
 		end
 
 		local items = lsp_util.locations_to_items(result)
-		find(prompt_title, items, { opts = opts })
+		find(prompt_title, items, { opts = opts.telescope })
 	end
 end
 
@@ -135,19 +135,19 @@ local function symbol_handler(prompt_name, opts)
 
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print('No symbol found')
+			print(opts.no_result_message)
 			return
 		end
 
 		local items = lsp_util.symbols_to_items(result)
-		find(prompt_name, items, { opts = opts })
+		find(prompt_name, items, { opts = opts.telescope })
 	end
 end
 
 local function call_hierarchy_handler(prompt_name, direction, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print('No call found')
+			print(opts.no_result_message)
 			return
 		end
 
@@ -164,14 +164,14 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 				})
 			end
 		end
-		find(prompt_name, items, { opts = opts })
+		find(prompt_name, items, { opts = opts.telescope })
 	end
 end
 
 local function code_action_handler(prompt_title, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print('No code action available')
+			print(opts.no_result_message)
 			return
 		end
 
@@ -180,13 +180,13 @@ local function code_action_handler(prompt_title, opts)
 		end
 
 		local find_opts = {
-			opts = opts,
+			opts = opts.telescope,
 			entry_maker = function(line)
 				return {
 					valid = line ~= nil,
 					value = line,
 					ordinal = line.idx .. line.title,
-					display = string.format('#%d: %s', line.idx, line.title),
+					display = string.format('%s%d: %s', opts.prefix, line.idx, line.title),
 				}
 			end,
 			attach_mappings = attach_code_action_mappings,
@@ -198,16 +198,37 @@ end
 
 return telescope.register_extension({
 	setup = function(opts)
-		vim.lsp.handlers['textDocument/declaration'] = location_handler('LSP Declarations', opts)
-		vim.lsp.handlers['textDocument/definition'] = location_handler('LSP Definitions', opts)
-		vim.lsp.handlers['textDocument/implementation'] = location_handler('LSP Implementations', opts)
-		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts)
-		vim.lsp.handlers['textDocument/references'] = location_handler('LSP References', opts)
-		vim.lsp.handlers['textDocument/documentSymbol'] = symbol_handler('LSP Document Symbols', opts)
-		vim.lsp.handlers['workspace/symbol'] = symbol_handler('LSP Workspace Symbols', opts)
-		vim.lsp.handlers['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts)
-		vim.lsp.handlers['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts)
-		vim.lsp.handlers['textDocument/codeAction'] = code_action_handler('LSP Code Actions', opts)
+		-- Use default options if needed.
+		opts = vim.tbl_deep_extend('keep', opts, {
+			location = {
+				telescope = {},
+				no_result_message = 'No reference found',
+			},
+			symbol = {
+				telescope = {},
+				no_result_message = 'No symbol found',
+			},
+			call_hierarchy = {
+				telescope = {},
+				no_result_message = 'No call found',
+			},
+			code_action = {
+				telescope = {},
+				no_result_message = 'No code action available',
+				prefix = '',
+			},
+		})
+
+		vim.lsp.handlers['textDocument/declaration'] = location_handler('LSP Declarations', opts.location)
+		vim.lsp.handlers['textDocument/definition'] = location_handler('LSP Definitions', opts.location)
+		vim.lsp.handlers['textDocument/implementation'] = location_handler('LSP Implementations', opts.location)
+		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts.location)
+		vim.lsp.handlers['textDocument/references'] = location_handler('LSP References', opts.location)
+		vim.lsp.handlers['textDocument/documentSymbol'] = symbol_handler('LSP Document Symbols', opts.symbol)
+		vim.lsp.handlers['workspace/symbol'] = symbol_handler('LSP Workspace Symbols', opts.symbol)
+		vim.lsp.handlers['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts.call_hierarchy)
+		vim.lsp.handlers['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts.call_hierarchy)
+		vim.lsp.handlers['textDocument/codeAction'] = code_action_handler('LSP Code Actions', opts.code_action)
 	end,
 	exports = {},
 })
