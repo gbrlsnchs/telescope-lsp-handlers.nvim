@@ -111,7 +111,7 @@ end
 local function location_handler(prompt_title, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print(opts.no_result_message)
+			print(opts.no_results_message)
 			return
 		end
 
@@ -135,7 +135,7 @@ local function symbol_handler(prompt_name, opts)
 
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print(opts.no_result_message)
+			print(opts.no_results_message)
 			return
 		end
 
@@ -147,7 +147,7 @@ end
 local function call_hierarchy_handler(prompt_name, direction, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print(opts.no_result_message)
+			print(opts.no_results_message)
 			return
 		end
 
@@ -171,7 +171,7 @@ end
 local function code_action_handler(prompt_title, opts)
 	return function(_, _, result)
 		if not result or vim.tbl_isempty(result) then
-			print(opts.no_result_message)
+			print(opts.no_results_message)
 			return
 		end
 
@@ -202,19 +202,19 @@ return telescope.register_extension({
 		opts = vim.tbl_deep_extend('keep', opts, {
 			location = {
 				telescope = {},
-				no_result_message = 'No reference found',
+				no_results_message = 'No references found',
 			},
 			symbol = {
 				telescope = {},
-				no_result_message = 'No symbol found',
+				no_results_message = 'No symbols found',
 			},
 			call_hierarchy = {
 				telescope = {},
-				no_result_message = 'No call found',
+				no_results_message = 'No calls found',
 			},
 			code_action = {
 				telescope = {},
-				no_result_message = 'No code action available',
+				no_results_message = 'No code actions available',
 				prefix = '',
 			},
 		})
