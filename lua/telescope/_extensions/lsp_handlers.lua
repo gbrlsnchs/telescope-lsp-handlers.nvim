@@ -69,10 +69,13 @@ local function apply_edit_fn(prompt_bufnr)
 		end
 
 		local action = selection.value
-		if action.edit then
-			lsp_util.apply_workspace_edit(action.edit)
-		elseif type(action.command) == 'table' then
-			lsp_buf.execute_command(action.command)
+		if action.edit or type(action.command) == "table" then
+			if action.edit then
+				lsp_util.apply_workspace_edit(action.edit)
+			end
+			if type(action.command) == 'table' then
+				lsp_buf.execute_command(action.command)
+			end
 		else
 			lsp_buf.execute_command(action)
 		end
