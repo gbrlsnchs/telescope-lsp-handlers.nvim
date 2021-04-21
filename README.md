@@ -26,6 +26,8 @@ Install this plugin with your favorite package manager and then load it with Tel
 telescope.load_extension('lsp_handlers')
 ```
 
+Then proceed to use the built-in API for supported requests.
+
 ### Customization
 It is possible to customize handlers in Telescope's setup phase. The following configuration is the
 default one:
@@ -33,6 +35,7 @@ default one:
 telescope.setup({
 	extensions = {
 		lsp_handlers = {
+			disable = {},
 			location = {
 				telescope = {},
 				no_results_message = 'No references found',
@@ -68,4 +71,15 @@ telescope.setup({
 }
 ```
 
-Then proceed to use the built-in API for supported requests.
+#### Disabling specific handlers
+```lua
+telescope.setup({
+	extensions = {
+		lsp_handlers = {
+			disable = {
+				['textDocument/codeAction'] = true,
+			},
+		},
+	},
+}
+```

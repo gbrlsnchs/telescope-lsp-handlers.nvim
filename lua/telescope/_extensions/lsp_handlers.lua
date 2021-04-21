@@ -203,6 +203,7 @@ return telescope.register_extension({
 	setup = function(opts)
 		-- Use default options if needed.
 		opts = vim.tbl_deep_extend('keep', opts, {
+			disable = {},
 			location = {
 				telescope = {},
 				no_results_message = 'No references found',
@@ -222,16 +223,24 @@ return telescope.register_extension({
 			},
 		})
 
-		vim.lsp.handlers['textDocument/declaration'] = location_handler('LSP Declarations', opts.location)
-		vim.lsp.handlers['textDocument/definition'] = location_handler('LSP Definitions', opts.location)
-		vim.lsp.handlers['textDocument/implementation'] = location_handler('LSP Implementations', opts.location)
-		vim.lsp.handlers['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts.location)
-		vim.lsp.handlers['textDocument/references'] = location_handler('LSP References', opts.location)
-		vim.lsp.handlers['textDocument/documentSymbol'] = symbol_handler('LSP Document Symbols', opts.symbol)
-		vim.lsp.handlers['workspace/symbol'] = symbol_handler('LSP Workspace Symbols', opts.symbol)
-		vim.lsp.handlers['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts.call_hierarchy)
-		vim.lsp.handlers['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts.call_hierarchy)
-		vim.lsp.handlers['textDocument/codeAction'] = code_action_handler('LSP Code Actions', opts.code_action)
+		local handlers = {
+			['textDocument/declaration'] = location_handler('LSP Declarations', opts.location),
+			['textDocument/definition'] = location_handler('LSP Definitions', opts.location),
+			['textDocument/implementation'] = location_handler('LSP Implementations', opts.location),
+			['textDocument/typeDefinition'] = location_handler('LSP Type Definitions', opts.location),
+			['textDocument/references'] = location_handler('LSP References', opts.location),
+			['textDocument/documentSymbol'] = symbol_handler('LSP Document Symbols', opts.symbol),
+			['workspace/symbol'] = symbol_handler('LSP Workspace Symbols', opts.symbol),
+			['callHierarchy/incomingCalls'] = call_hierarchy_handler('LSP Incoming Calls', 'from', opts.call_hierarchy),
+			['callHierarchy/outgoingCalls'] = call_hierarchy_handler('LSP Outgoing Calls', 'to', opts.call_hierarchy),
+			['textDocument/codeAction'] = code_action_handler('LSP Code Actions', opts.code_action),
+		}
+
+		for req, handler in pairs(handlers) do
+			if not opts.disable[req] then
+				vim.lsp.handlers[req] = handler
+			end
+		end
 	end,
 	exports = {},
 })
