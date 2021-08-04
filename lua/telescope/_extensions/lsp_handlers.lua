@@ -118,13 +118,18 @@ local function location_handler(prompt_title, opts)
 			return
 		end
 
-		if not vim.tbl_islist(result) then
+		if opts.jump_type ~= "never" and (not vim.tbl_islist(result) or #result == 1) then
+			if vim.tbl_islist(result) then
+				result = result[1]
+			end
+			if opts.jump_type == "tab" then
+				vim.cmd("tabedit")
+			elseif opts.jump_type == "split" then
+				vim.cmd("new")
+			elseif opts.jump_type == "vsplit" then
+				vim.cmd("vnew")
+			end
 			jump_to_location(result)
-			return
-		end
-
-		if #result == 1 then
-			jump_to_location(result[1])
 			return
 		end
 
@@ -207,6 +212,7 @@ return telescope.register_extension({
 			location = {
 				telescope = {},
 				no_results_message = 'No references found',
+				jump_type = nil,
 			},
 			symbol = {
 				telescope = {},
