@@ -39,6 +39,7 @@ telescope.setup({
 			location = {
 				telescope = {},
 				no_results_message = 'No references found',
+				jump_type = nil,
 			},
 			symbol = {
 				telescope = {},
@@ -70,6 +71,13 @@ telescope.setup({
 	},
 }
 ```
+
+By default the `location` handler jumps to the location in the current window if there is only one,
+you can change this behavior using option `jump_type`:
+- `jump_type = "never"`: show Telescope picker
+- `jump_type = "tab"`: jump to location in a new tab
+- `jump_type = "split"`: jump to location in a new horizontal split
+- `jump_type = "vsplit"`: jump to location in a new vertical split
 
 #### Disabling specific handlers
 ```lua
