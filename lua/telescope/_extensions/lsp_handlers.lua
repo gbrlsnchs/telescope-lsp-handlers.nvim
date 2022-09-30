@@ -34,13 +34,19 @@ local function jump_fn(prompt_bufnr, action)
 			character = selection.col,
 		}
 
+		-- process to uri if filename is not uri
+		local uri = selection.filename
+		if not string.match(uri, "^[^:]+://") then
+			uri = vim.uri_from_fname(selection.filename)
+		end
+
 		jump_to_location({
-			uri = vim.uri_from_fname(selection.filename),
+			uri = uri,
 			range = {
 				start = pos,
 				['end'] = pos,
 			}
-		})
+		}, "utf-8")
 	end
 end
 
@@ -124,12 +130,12 @@ local function location_handler(prompt_title, opts)
 		end
 
 		if not vim.tbl_islist(result) then
-			jump_to_location(result)
+			jump_to_location(result, "utf-8")
 			return
 		end
 
 		if #result == 1 then
-			jump_to_location(result[1])
+			jump_to_location(result[1], "utf-8")
 			return
 		end
 
