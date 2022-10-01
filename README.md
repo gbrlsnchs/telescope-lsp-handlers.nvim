@@ -1,5 +1,7 @@
 # telescope-lsp-handlers.nvim
+
 ## What
+
 An extension for Telescope that registers handlers for
 - `textDocument/declaration`
 - `textDocument/definition`
@@ -10,76 +12,87 @@ An extension for Telescope that registers handlers for
 - `workspace/symbol`
 - `callHierarchy/incomingCalls`
 - `callHierarchy/outgoingCalls`
-- `textDocument/codeAction`
 
 ## Why
-1. I wanted to learn how to extend Telescope
-2. I wanted to learn how to extend Neovim's built-in LSP handlers
-3. I wanted to use `vim.lsp.buf.*` commands instead of `Telescope lsp_*` ones so I wouldn't need to
-   rely on Telescope replicating utility functions that are already part of Neovim's built-in LSP
-4. Telescope's built-in LSP functions do not push items to the tagstack when picked manually, these
-   handlers do
+
+Telescope's built-in LSP functions do not push items to the tagstack when picked manually, these handlers do.
 
 ## How
-Install this plugin with your favorite package manager and then load it with Telescope:
+
+Install this plugin with your favorite package manager and then load it:
 ```lua
-telescope.load_extension('lsp_handlers')
+require'telescope-lsp-handlers'.setup()
 ```
 
 Then proceed to use the built-in API for supported requests.
 
 ### Customization
-It is possible to customize handlers in Telescope's setup phase. The following configuration is the
-default one:
+It is possible to customize handlers when calling setup. The following configuration is the default one:
 ```lua
-telescope.setup({
-	extensions = {
-		lsp_handlers = {
-			disable = {},
-			location = {
-				telescope = {},
-				no_results_message = 'No references found',
-			},
-			symbol = {
-				telescope = {},
-				no_results_message = 'No symbols found',
-			},
-			call_hierarchy = {
-				telescope = {},
-				no_results_message = 'No calls found',
-			},
-			code_action = {
-				telescope = {},
-				no_results_message = 'No code actions available',
-				prefix = '',
-			},
-		},
-	}
+require'telescope-lsp-handlers'.setup({
+  declaration = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Declarations' },
+    no_results_message = 'Declaration not found',
+  },
+  definition = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Definitions' },
+    no_results_message = 'Definition not found',
+  },
+  implementation = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Implementations' },
+    no_results_message = 'Implementation not found',
+  },
+  type_definition = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Type Definitions' },
+    no_results_message = 'Type definition not found',
+  },
+  reference = {
+    disabled = false,
+    picker = { prompt_title = 'LSP References' },
+    no_results_message = 'No references found'
+  },
+  document_symbol = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Document Symbols' },
+    no_results_message = 'No symbols found',
+  },
+  workspace_symbol = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Workspace Symbols' },
+    no_results_message = 'No symbols found',
+  },
+  incoming_calls = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Incoming Calls' },
+    no_results_message = 'No calls found',
+  },
+  outgoing_calls = {
+    disabled = false,
+    picker = { prompt_title = 'LSP Outgoing Calls' },
+    no_results_message = 'No calls found',
+  },
 })
 ```
+Note: setup can be performed multiple times, each new call will simply replace old handlers.
 
-I personally like to have the following settings, which gives me a cute dropdown for code actions:
+#### Applying themes to specific handler
 ```lua
-telescope.setup({
-	extensions = {
-		lsp_handlers = {
-			code_action = {
-				telescope = require('telescope.themes').get_dropdown({}),
-			},
-		},
-	},
+require'telescope-lsp-handlers'.setup({
+  reference = {
+    picker = require('telescope.themes').get_dropdown({}), -- get_dropdown generates a table, which gets merged with plugin defaults
+  },
 }
 ```
 
 #### Disabling specific handlers
 ```lua
-telescope.setup({
-	extensions = {
-		lsp_handlers = {
-			disable = {
-				['textDocument/codeAction'] = true,
-			},
-		},
-	},
+require'telescope-lsp-handlers'.setup({
+  reference = {
+    disabled = true,
+  },
 }
 ```
