@@ -16,7 +16,7 @@ local mapping_actions = {
 	['<C-t>'] = actions.file_tab,
 }
 
-local function jump_fn(prompt_bufnr, action)
+local function jump_fn(prompt_bufnr, action, offset_encoding)
 	return function()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
 		if not selection then
@@ -39,27 +39,29 @@ local function jump_fn(prompt_bufnr, action)
 			range = {
 				start = pos,
 				['end'] = pos,
-			}
-		})
+			},
+		}, offset_encoding)
 	end
 end
 
-local function attach_location_mappings(prompt_bufnr, map)
-	local modes = {'i', 'n'}
-	local keys = {'<CR>', '<C-x>', '<C-v>', '<C-t>'}
+local function attach_location_mappings(offset_encoding)
+	return function(prompt_bufnr, map)
+		local modes = { 'i', 'n' }
+		local keys = { '<CR>', '<C-x>', '<C-v>', '<C-t>' }
 
-	for _, mode in pairs(modes) do
-		for _, key in pairs(keys) do
-			local action = mapping_actions[key]
-			map(mode, key, jump_fn(prompt_bufnr, action))
+		for _, mode in pairs(modes) do
+			for _, key in pairs(keys) do
+				local action = mapping_actions[key]
+				map(mode, key, jump_fn(prompt_bufnr, action, offset_encoding))
+			end
 		end
-	end
 
-	-- Additional mappings don't push the item to the tagstack.
-	return true
+		-- Additional mappings don't push the item to the tagstack.
+		return true
+	end
 end
 
-local function apply_edit_fn(prompt_bufnr)
+local function apply_edit_fn(prompt_bufnr, offset_encoding)
 	return function()
 		local selection = action_state.get_selected_entry(prompt_bufnr)
 		actions.close(prompt_bufnr)
@@ -68,9 +70,9 @@ local function apply_edit_fn(prompt_bufnr)
 		end
 
 		local action = selection.value
-		if action.edit or type(action.command) == "table" then
+		if action.edit or type(action.command) == 'table' then
 			if action.edit then
-				lsp_util.apply_workspace_edit(action.edit)
+				lsp_util.apply_workspace_edit(action.edit, offset_encoding)
 			end
 			if type(action.command) == 'table' then
 				lsp_buf.execute_command(action.command)
@@ -81,89 +83,97 @@ local function apply_edit_fn(prompt_bufnr)
 	end
 end
 
-local function attach_code_action_mappings(prompt_bufnr, map)
-	map('i', '<CR>', apply_edit_fn(prompt_bufnr))
-	map('n', '<CR>', apply_edit_fn(prompt_bufnr))
+local function attach_code_action_mappings(offset_encoding)
+	return function(prompt_bufnr, map)
+		map('i', '<CR>', apply_edit_fn(prompt_bufnr, offset_encoding))
+		map('n', '<CR>', apply_edit_fn(prompt_bufnr, offset_encoding))
 
-	return true
+		return true
+	end
 end
 
-local function find(prompt_title, items, find_opts)
+local function find(prompt_title, items, find_opts, offset_encoding)
 	local opts = find_opts.opts or {}
 
 	local entry_maker = find_opts.entry_maker or make_entry.gen_from_quickfix(opts)
-	local attach_mappings = find_opts.attach_mappings or attach_location_mappings
+	local attach_mappings = find_opts.attach_mappings or attach_location_mappings(offset_encoding)
 	local previewer = nil
 	if not find_opts.hide_preview then
 		previewer = conf.qflist_previewer(opts)
 	end
 
-	pickers.new(opts, {
-		prompt_title = prompt_title,
-		finder = finders.new_table({
-			results = items,
-			entry_maker = entry_maker,
-		}),
-		previewer = previewer,
-		sorter = conf.generic_sorter(opts),
-		attach_mappings = attach_mappings,
-	}):find()
+	pickers
+		.new(opts, {
+			prompt_title = prompt_title,
+			finder = finders.new_table({
+				results = items,
+				entry_maker = entry_maker,
+			}),
+			previewer = previewer,
+			sorter = conf.generic_sorter(opts),
+			attach_mappings = attach_mappings,
+		})
+		:find()
 end
 
 local function get_correct_result(result1, result2)
-  return type(result1) == 'table' and result1 or result2
+	return type(result1) == 'table' and result1 or result2
 end
 
 local function location_handler(prompt_title, opts)
-	return function(_, result1, result2, _)
-    local result = get_correct_result(result1, result2)
+	-- Each lsp-handler has this signature: function(err, result, ctx, config)
+	return function(_, result, context, _)
+		local res = get_correct_result(result, context)
+		local client = vim.lsp.get_client_by_id(context.client_id)
 
-		if not result or vim.tbl_isempty(result) then
+		if not res or vim.tbl_isempty(res) then
 			print(opts.no_results_message)
 			return
 		end
 
-		if not vim.tbl_islist(result) then
-			jump_to_location(result)
+		if not vim.tbl_islist(res) then
+			jump_to_location(res, client.offset_encoding)
 			return
 		end
 
-		if #result == 1 then
-			jump_to_location(result[1])
+		if #res == 1 then
+			jump_to_location(res[1], client.offset_encoding)
 			return
 		end
 
-		local items = lsp_util.locations_to_items(result)
-		find(prompt_title, items, { opts = opts.telescope })
+		local items = lsp_util.locations_to_items(res, client.offset_encoding)
+		find(prompt_title, items, { opts = opts.telescope }, client.offset_encoding)
 	end
 end
 
 local function symbol_handler(prompt_name, opts)
 	opts = opts or {}
 
-	return function(_, result1, result2, _)
-    local result = get_correct_result(result1, result2)
-		if not result or vim.tbl_isempty(result) then
+	-- Each lsp-handler has this signature: function(err, result, ctx, config)
+	return function(_, result, context, _)
+		local res = get_correct_result(result, context)
+		if not res or vim.tbl_isempty(res) then
 			print(opts.no_results_message)
 			return
 		end
 
-		local items = lsp_util.symbols_to_items(result)
-		find(prompt_name, items, { opts = opts.telescope })
+		local items = lsp_util.symbols_to_items(res)
+		local client = vim.lsp.get_client_by_id(context.client_id)
+		find(prompt_name, items, { opts = opts.telescope }, client.offset_encoding)
 	end
 end
 
 local function call_hierarchy_handler(prompt_name, direction, opts)
-	return function(_, result1, result2, _)
-    local result = get_correct_result(result1, result2)
-
-		if not result or vim.tbl_isempty(result) then
+	-- Each lsp-handler has this signature: function(err, result, ctx, config)
+	return function(_, result, context, _)
+		local res = get_correct_result(result, context)
+		if not res or vim.tbl_isempty(res) then
 			print(opts.no_results_message)
 			return
 		end
 
 		local items = {}
-		for _, ch_call in pairs(result) do
+		for _, ch_call in pairs(res) do
 			local ch_item = ch_call[direction]
 
 			for _, range in pairs(ch_call.fromRanges) do
@@ -175,23 +185,25 @@ local function call_hierarchy_handler(prompt_name, direction, opts)
 				})
 			end
 		end
-		find(prompt_name, items, { opts = opts.telescope })
+		local client = vim.lsp.get_client_by_id(context.client_id)
+		find(prompt_name, items, { opts = opts.telescope }, client.offset_encoding)
 	end
 end
 
 local function code_action_handler(prompt_title, opts)
-	return function(_, result1, result2, _)
-    local result = get_correct_result(result1, result2)
-
-		if not result or vim.tbl_isempty(result) then
+	-- Each lsp-handler has this signature: function(err, result, ctx, config)
+	return function(_, result, context, _)
+		local res = get_correct_result(result, context)
+		if not res or vim.tbl_isempty(res) then
 			print(opts.no_results_message)
 			return
 		end
 
-		for idx, value in ipairs(result) do
+		for idx, value in ipairs(res) do
 			value.idx = idx
 		end
 
+		local client = vim.lsp.get_client_by_id(context.client_id)
 		local find_opts = {
 			opts = opts.telescope,
 			entry_maker = function(line)
@@ -202,10 +214,10 @@ local function code_action_handler(prompt_title, opts)
 					display = string.format('%s%d: %s', opts.prefix, line.idx, line.title),
 				}
 			end,
-			attach_mappings = attach_code_action_mappings,
+			attach_mappings = attach_code_action_mappings(client.offset_encoding),
 			hide_preview = true,
 		}
-		find(prompt_title, result, find_opts)
+		find(prompt_title, res, find_opts, client.offset_encoding)
 	end
 end
 
